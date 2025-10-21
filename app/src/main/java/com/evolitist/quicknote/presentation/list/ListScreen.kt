@@ -1,6 +1,5 @@
 package com.evolitist.quicknote.presentation.list
 
-import android.content.Context
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -14,42 +13,47 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.core.content.edit
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.stringSetPreferencesKey
+import androidx.datastore.preferences.preferencesDataStoreFile
 import com.evolitist.quicknote.presentation.theme.QuickNoteTheme
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+
+private val PrefsDataKey = stringSetPreferencesKey("data")
 
 @Composable
 fun ListScreen(modifier: Modifier = Modifier) {
+    val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val prefs = remember {
-        context.getSharedPreferences(
-            "prefs",
-            Context.MODE_PRIVATE,
-        )
+        PreferenceDataStoreFactory.create {
+            context.preferencesDataStoreFile("prefs")
+        }
     }
-    val textList = remember {
-        val prefSet = prefs.getStringSet("data", emptySet<String>())!!.toList()
-        SnapshotStateList(prefSet.size) { prefSet[it] }
-    }
+    val textList by prefs.data
+        .map { it[PrefsDataKey]?.toList() ?: emptyList() }
+        .collectAsState(emptyList())
     var text by remember { mutableStateOf("") }
 
     fun saveValue() {
         val keyedText = "" + System.currentTimeMillis() + "|$text"
-        textList.add(keyedText)
-        prefs.edit {
-            val prefSet = textList.toSet()
-            putStringSet(
-                "data",
-                prefSet,
-            )
+        scope.launch {
+            prefs.updateData {
+                val prefs = it.toMutablePreferences()
+                prefs[PrefsDataKey] = (textList + keyedText).toSet()
+                prefs.toPreferences()
+            }
         }
         text = ""
     }
