@@ -1,8 +1,9 @@
 package com.evolitist.quicknote.presentation.newnote
 
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -14,10 +15,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
@@ -41,7 +38,7 @@ fun NewNoteScreen(
         }
     }
 
-    var text by remember { mutableStateOf("") }
+    val state = rememberTextFieldState()
     Scaffold(
         topBar = {
             TopAppBar(
@@ -52,23 +49,22 @@ fun NewNoteScreen(
                     )
                 },
                 title = {},
+                actions = {
+                    IconButton(
+                        onClick = { viewModel.onAddNoteClick(state.text.toString()) },
+                        content = { Icon(painterResource(R.drawable.ic_check), contentDescription = null) },
+                    )
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                 ),
-            )
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { viewModel.onAddNoteClick(text) },
-                content = { Icon(painterResource(R.drawable.ic_add), contentDescription = null) },
             )
         },
         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         modifier = modifier,
     ) { innerPadding ->
         TextField(
-            value = text,
-            onValueChange = { text = it },
+            state = state,
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = Color.Transparent,
                 unfocusedContainerColor = Color.Transparent,
@@ -79,7 +75,9 @@ fun NewNoteScreen(
             ),
             shape = RectangleShape,
             placeholder = { Text("What do you want to note?") },
-            modifier = Modifier.padding(innerPadding),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
         )
     }
 }
