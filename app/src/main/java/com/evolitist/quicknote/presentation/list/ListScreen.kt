@@ -18,49 +18,28 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
-import androidx.datastore.preferences.core.stringSetPreferencesKey
-import androidx.datastore.preferences.preferencesDataStoreFile
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.evolitist.quicknote.presentation.theme.QuickNoteTheme
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
-
-private val PrefsDataKey = stringSetPreferencesKey("data")
 
 @Composable
-fun ListScreen(modifier: Modifier = Modifier) {
-    val context = LocalContext.current
-    val prefs = remember {
-        PreferenceDataStoreFactory.create {
-            context.preferencesDataStoreFile("prefs")
-        }
-    }
-
+fun ListScreen(
+    modifier: Modifier = Modifier,
+    viewModel: ListViewModel = hiltViewModel(),
+) {
     var text by remember { mutableStateOf("") }
-    val textList by prefs.data
-        .map { it[PrefsDataKey]?.toList() ?: emptyList() }
+    val textList by viewModel.notesFlow
         .collectAsState(emptyList())
 
-    val scope = rememberCoroutineScope()
     fun saveValue() {
-        val keyedText = "" + System.currentTimeMillis() + "|$text"
-        scope.launch {
-            prefs.updateData {
-                val prefs = it.toMutablePreferences()
-                prefs[PrefsDataKey] = (textList + keyedText).toSet()
-                prefs.toPreferences()
-            }
-        }
+        viewModel.addNote(text)
         text = ""
     }
 
@@ -92,11 +71,11 @@ fun ListScreen(modifier: Modifier = Modifier) {
             LazyColumn {
                 items(
                     items = textList,
-                    key = { it.split("|", limit = 2).first() },
+                    key = { it.id },
                 ) {
                     ListItem(
                         headlineContent = {
-                            Text(it.split("|", limit = 2).last())
+                            Text(it.text)
                         },
                         trailingContent = {
                             Button(
