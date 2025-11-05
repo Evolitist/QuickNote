@@ -19,6 +19,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SearchBarDefaults
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
@@ -27,6 +30,8 @@ import androidx.compose.material3.rememberSearchBarState
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -39,6 +44,7 @@ import com.evolitist.quicknote.R
 import com.evolitist.quicknote.domain.model.Note
 import com.evolitist.quicknote.extensions.plus
 import com.evolitist.quicknote.presentation.theme.QuickNoteTheme
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,7 +57,13 @@ fun ListScreen(
     val textFieldState = rememberTextFieldState()
     val searchBarState = rememberSearchBarState()
 
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+
     Scaffold(
+        snackbarHost = {
+            SnackbarHost(snackbarHostState)
+        },
         topBar = {
             BoxWithConstraints {
                 TopSearchBar(
@@ -90,7 +102,20 @@ fun ListScreen(
             ) {
                 NoteItem(
                     note = it,
-                    onDismiss = { viewModel.deleteNote(it.id) },
+                    onDismiss = {
+                        scope.launch {
+                            viewModel.markNoteDeleted(it.id)
+                            val result = snackbarHostState.showSnackbar(
+                                message = "Note deleted",
+                                actionLabel = "Undo",
+                            )
+                            if (result == SnackbarResult.ActionPerformed) {
+                                viewModel.markNoteDeleted(null)
+                            } else {
+                                viewModel.deleteNote(it.id)
+                            }
+                        }
+                    },
                 )
             }
         }
